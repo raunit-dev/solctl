@@ -54,28 +54,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             
             println!("Requesting airdrop...");
             let signature = client.request_airdrop(&pubkey, lamports)?;
+           println!("request airdrop");
+           client.poll_for_signature_confirmation(&signature, 30)?;
+           println!("airdrop done dear")
             
-            // Use the modern confirmation approach
-            let mut confirmed = false;
-            for _ in 0..30 {
-                match client.get_signature_status(&signature)? {
-                    Some(Ok(_)) => {
-                        confirmed = true;
-                        break;
-                    }
-                    Some(Err(e)) => return Err(format!("Transaction failed: {}", e).into()),
-                    None => {
-                        std::thread::sleep(std::time::Duration::from_secs(1));
-                        continue;
-                    }
-                }
-            }
-            
-            if confirmed {
-                println!(" Airdrop completed successfully!");
-            } else {
-                return Err("Transaction confirmation timeout".into());
-            }
         }
         Commands::Balance { address } => {
             let pubkey = Pubkey::from_str(&address)?;
@@ -111,7 +93,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 format!("Failed to parse keypair file '{}': {}", keypair_path, e)
             })?;
 
-            // Use the new recommended keypair creation method
             let from_keypair = Keypair::from_bytes(&keypair_bytes).map_err(|e| {
                 format!("Invalid keypair data in '{}': {}", keypair_path, e)
             })?;
@@ -120,14 +101,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             let to_pubkey = Pubkey::from_str(&to_pubkey)?;
             let lamports = (amount * LAMPORTS_PER_SOL as f64) as u64;
 
-            // Get the latest blockhash
             let recent_blockhash = client.get_latest_blockhash()?;
 
-            // Use the new system interface for transfer instruction
             let transfer_instruction =
                 system_instruction::transfer(&from_pubkey, &to_pubkey, lamports);
 
-            // Create and sign the transaction using the modern approach
             let transaction = Transaction::new_signed_with_payer(
                 &[transfer_instruction],
                 Some(&from_pubkey),
@@ -135,33 +113,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 recent_blockhash,
             );
 
-            // Send the transaction and manually confirm
-            let signature = client.send_transaction(&transaction)?;
+            let signature = client.send_and_confirm_transaction(&transaction)?;
             println!("Transaction sent with signature: {}", signature);
             
-            // Manual confirmation loop
-            let mut confirmed = false;
-            for _ in 0..30 {
-                match client.get_signature_status(&signature)? {
-                    Some(Ok(_)) => {
-                        confirmed = true;
-                        break;
-                    }
-                    Some(Err(e)) => return Err(format!("Transaction failed: {}", e).into()),
-                    None => {
-                        std::thread::sleep(std::time::Duration::from_secs(1));
-                        continue;
-                    }
-                }
             }
             
-            if confirmed {
-                println!(" Transfer successful! Signature: {}", signature);
-            } else {
-                return Err("Transaction confirmation timeout".into());
-            }
         }
-    }
+    
 
     Ok(())
 }
