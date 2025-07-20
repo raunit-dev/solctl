@@ -1,0 +1,15 @@
+[package]
+name = "clappy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bs58 = "0.5.1"
+clap = { version = "4.5.41", features = ["derive"] }
+dirs = "6.0.0"
+serde_json = "1.0.141"
+solana-clap-v3-utils = "2.3.5"
+solana-client = "2.3.5"
+solana-pubkey = "2.4.0"
+solana-rpc-client = "=2.3.5"
+solana-sdk = "2.3.1"
